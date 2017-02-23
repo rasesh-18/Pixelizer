@@ -5,6 +5,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -21,8 +22,9 @@ import javax.swing.border.EmptyBorder;
 
 public class Pixelizer implements ActionListener, KeyListener{
 	
-	public static final String DEFAULT_INPUT_DIR  = "~/temp/scans/input/";
-	public static final String DEFAULT_OUTPUT_DIR = "~/temp/scans/output/"; 
+	public static final String DEFAULT_INPUT_DIR  = "~/temp/scans/input";
+	public static final String DEFAULT_OUTPUT_DIR = "~/temp/scans/output";
+	public static final String PROCESS_SCAN_LOCATION = "/Users/Sensei/process-scan.sh";
 	
 	public static final String[] PROMPT_VALUES = {
 			"Source Directory         ",
@@ -112,6 +114,14 @@ public class Pixelizer implements ActionListener, KeyListener{
 	public static void main( String[] args ) {
 		new Pixelizer().setUpUI();
 	}
+	
+	private void runScript( String execString ) {
+		try {
+			Runtime.getRuntime().exec( "touch /Users/Sensei/testing" );
+		} catch (IOException e) {
+			e.printStackTrace();
+		} 
+	}
 
 	@Override
 	public void actionPerformed(ActionEvent e) {
@@ -138,15 +148,15 @@ public class Pixelizer implements ActionListener, KeyListener{
 			}
 		}
 		
-		// For testing purposes
+		StringBuilder execString = new StringBuilder( PROCESS_SCAN_LOCATION + " " );
 		for( String s : directories ) {
-			System.out.println( s );
+			execString.append( s + " " );
 		}
 		for( Integer i : values ) {
-			System.out.println( i );
-		}
-		
-		// TODO interface Java and Shell at this point 
+			execString.append( i.intValue() + " " );
+		}		
+		System.out.println( execString.toString() );
+		runScript( execString.toString() );
 	}
 
 	@Override
