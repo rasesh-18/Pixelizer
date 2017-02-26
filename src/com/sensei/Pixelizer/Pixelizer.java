@@ -1,11 +1,12 @@
 package com.sensei.Pixelizer;
 
+import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -17,13 +18,14 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.JTextField;
 import javax.swing.border.EmptyBorder;
 
 public class Pixelizer implements ActionListener, KeyListener{
 	
-	public static final String DEFAULT_INPUT_DIR  = "~/temp/scans/input";
-	public static final String DEFAULT_OUTPUT_DIR = "~/temp/scans/output";
+	public static final String DEFAULT_INPUT_DIR  = "/Users/Sensei/temp/scans/input";
+	public static final String DEFAULT_OUTPUT_DIR = "/Users/Sensei/temp/scans/output";
 	public static final String PROCESS_SCAN_LOCATION = "/Users/Sensei/process-scan.sh";
 	
 	public static final String[] PROMPT_VALUES = {
@@ -34,21 +36,27 @@ public class Pixelizer implements ActionListener, KeyListener{
 			"Top Boundary             ",
 			"Bottom Boundary          ",
 			"Left Page Right X Offset ",
-			"Right page Left X Offset " 
+			"Right page Left X Offset "
 	};
 	
 	public static final int NUM_COLS     = 2;
 	public static final int NUM_ROWS     = 8;
 	public static final int PADDING      = 20;
-	public static final int FRAME_HEIGHT = 350;
+	public static final int FRAME_HEIGHT = 400;
 	public static final int FRAME_WIDTH  = 450;
 	
-	private JFrame  mainFrame  = null;
-	private JPanel  mainPanel  = null;
-	private JPanel  valuePanel = null;
-	private JButton process    = null;
+	private JFrame       mainFrame   = null;
+	private JPanel       mainPanel   = null;
+	private JPanel       valuePanel  = null;
+	private JPanel       buttonPanel = null;
+	
+	private JButton      process     = null;
+	private JProgressBar progressBar = null;
+	private JTextField   infoText    = null;
 
 	private Map<JLabel, JTextField> inputData = null;
+	
+	private CommandLineExec exec = null ;
 	
 	private void setUpUI() {
 		createElements();
@@ -72,42 +80,64 @@ public class Pixelizer implements ActionListener, KeyListener{
 			valuePanel.add( inputData.get( label ) );
 		}
 		
+		buttonPanel.setLayout( new FlowLayout( FlowLayout.CENTER ) );
+		buttonPanel.setMaximumSize( new Dimension( 500, 30 ) );
+		buttonPanel.add( process );
+		
 		mainPanel.setLayout( new BoxLayout( mainPanel, BoxLayout.Y_AXIS ) );
 		mainPanel.setBorder( new EmptyBorder( PADDING, 
 											  PADDING, 
 											  PADDING, 
 											  PADDING ) );
+		
+		infoText.setMaximumSize( new Dimension( 500, 10 ) );
+		infoText.setEditable( false );
+		infoText.setBackground( mainFrame.getBackground() );
+		infoText.setBorder( null );
+		infoText.setAlignmentX( JTextField.CENTER_ALIGNMENT );
+		infoText.setAlignmentY( JTextField.CENTER_ALIGNMENT );
+		
 		mainPanel.add( valuePanel );
-		mainPanel.add( process );
+		mainPanel.add( buttonPanel );
+		mainPanel.add( progressBar );
+		mainPanel.add( infoText );
 		
 		mainFrame.setContentPane( mainPanel );
 	}
 	
 	private void createElements() {
-		mainFrame  = new JFrame( "Process-scan" );
-		mainPanel  = new JPanel();
-		valuePanel = new JPanel();
-		process    = new JButton( "Process" );
-		inputData  = new LinkedHashMap<JLabel, JTextField>();
+		mainFrame   = new JFrame( "Process-scan" );
+		mainPanel   = new JPanel();
+		valuePanel  = new JPanel();
+		buttonPanel = new JPanel();
+		
+		process     = new JButton( "Process" );
+		progressBar = new JProgressBar();
+		inputData   = new LinkedHashMap<JLabel, JTextField>();
+		infoText    = new JTextField();
 		
 		populateInputDataMap();
 	}
 	
 	private void populateInputDataMap() {
-		for( String prompt : PROMPT_VALUES ) {
-			JLabel key = new JLabel( prompt );
+		int i=0; 
+		for( String promptValues : PROMPT_VALUES ) {
+			
+			JLabel key = new JLabel( promptValues );
 			JTextField value = new JTextField();
 			
-			if( prompt.matches( PROMPT_VALUES[0] ) ) {
+			if( i == 0 ) {
 				value.setText( DEFAULT_INPUT_DIR );
 			}
-			else if( prompt.matches( PROMPT_VALUES[1] ) ) {
+			else if( i == 1 ) {
 				value.setText( DEFAULT_OUTPUT_DIR );
 			}
 			else {
 				value.addKeyListener( this );
 			}
+			
 			inputData.put( key, value );
+			i++ ;
 		}
 	}
 	
@@ -115,16 +145,9 @@ public class Pixelizer implements ActionListener, KeyListener{
 		new Pixelizer().setUpUI();
 	}
 	
-	private void runScript( String execString ) {
-		try {
-			Runtime.getRuntime().exec( "touch /Users/Sensei/testing" );
-		} catch (IOException e) {
-			e.printStackTrace();
-		} 
-	}
-
 	@Override
 	public void actionPerformed(ActionEvent e) {
+		
 		List<String> directories = new ArrayList<String>();
 		List<Integer> values     = new ArrayList<Integer>();
 		
@@ -147,16 +170,30 @@ public class Pixelizer implements ActionListener, KeyListener{
 				}
 			}
 		}
-		
-		StringBuilder execString = new StringBuilder( PROCESS_SCAN_LOCATION + " " );
+
+		List<String> cmdParts = new ArrayList<>() ;
+		cmdParts.add( PROCESS_SCAN_LOCATION ) ;
 		for( String s : directories ) {
-			execString.append( s + " " );
+			cmdParts.add( s ) ;
 		}
 		for( Integer i : values ) {
-			execString.append( i.intValue() + " " );
+			cmdParts.add( Integer.toString(i) ) ;
 		}		
-		System.out.println( execString.toString() );
-		runScript( execString.toString() );
+		
+		exec = new CommandLineExec( cmdParts.toArray( new String[8] ), this ) ;
+		exec.start() ;
+	}
+	
+	public JProgressBar getProgressBar() {
+		return progressBar;
+	}
+	
+	public JTextField getInfoText() {
+		return infoText;
+	}
+	
+	public Map<JLabel, JTextField> getInputData() {
+		return inputData;
 	}
 
 	@Override
