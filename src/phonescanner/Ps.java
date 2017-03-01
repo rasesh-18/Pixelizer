@@ -264,8 +264,6 @@ public class Ps implements ActionListener{
 	        }
 	        if (counter == 9){
 	        button.setText("PROCESSING YOUR IMAGES....");
-	        String[] copyS = {id,od};
-	        int[] copyi = {lm1,rm1,tm1,bm1,lprxo1,rplxo1,spn1};
 	        }
         }
 	 
